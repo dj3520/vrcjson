@@ -1,8 +1,10 @@
 import tkinter as tk
+import tkinter.messagebox
 
 from tkinter import filedialog
 
 import os, json
+import traceback # End user
 
 rootwin = tk.Tk()
 rootwin.title("VRCJSON - VRChat config file GUI * by DJ3520")
@@ -157,27 +159,39 @@ if os.path.isfile(file):
       else: v.set(settings[k])
 
 def save_settings():
-  global matchup
-  settings = {}
-  for k, v in matchup.items():
-    if k == "disableRichPresence": settings[k] = not v.get()
-    else: settings[k] = v.get()
-    print(k, v.get())
-    if isinstance(settings[k], str):
-      if settings[k].isdigit():
-        settings[k] = int(settings[k])
-      elif settings[k] == "":
-        del settings[k]
+  try:
+    global matchup
+    settings = {}
+    for k, v in matchup.items():
+      if k == "disableRichPresence": settings[k] = not v.get()
+      else: settings[k] = v.get()
+      print(k, v.get())
+      if isinstance(settings[k], str):
+        if settings[k].isdigit():
+          settings[k] = int(settings[k])
+        elif settings[k] == "":
+          del settings[k]
 
-  # Slightly different between how we internally handle this and how VRC expects the save to be organized.
-  if settings["particle_system_limiter"]:
-    settings["betas"] = ["particle_system_limiter"]
-  del settings["particle_system_limiter"]
+    # Slightly different between how we internally handle this and how VRC expects the save to be organized.
+    if settings["particle_system_limiter"]:
+      settings["betas"] = ["particle_system_limiter"]
+    del settings["particle_system_limiter"]
 
-  with open(file, 'w') as f:
-    json.dump(settings, f, indent=2)
+    savestr = json.dumps(settings, indent=2)
+    with open(file, 'w') as f:
+      f.write(savestr)
+    tkinter.messagebox.showinfo(title="Save successful.", message="New settings saved to config.json file. VRChat will need to be restarted for these changes to take effect.")
+  except Exception as e:
+    with open('error.txt', 'a') as f:
+      f.write(str(e))
+      f.write(traceback.format_exc())
+    tkinter.messagebox.showwarning(title="Save failed!", message="Something happened during the file save. Please report this to the GitHub and upload the error.txt file.")
 
 save_settings_button.config(command=save_settings)
+
+if not os.path.isdir(os.getenv('USERPROFILE') + "\\AppData\\LocalLow\\VRChat\\VRChat"):
+  tkinter.messagebox.showerror(title="Folder not found", message="Could not find folder where VRChat expects the settings file to exist.")
+  raise SystemExit
 
 rootwin.resizable(tk.FALSE, tk.FALSE)
 rootwin.mainloop()
